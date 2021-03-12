@@ -1,0 +1,61 @@
+# Example BigMassive file format
+
+# Commas start with hashtags
+noop # They can stand on their own line or start at the very end of an existing one
+ noop # Spaces placed at the start or the end of lines are removed.
+# Empty lines are ignored:
+
+noop_block: # Blocks of code start with an indent and end with an unindent.
+    noop # Note the single indent here.
+    noop_block:
+        noop # Nested blocks of code must be indented one more time progressively.
+
+# This example file defines a system for a simple to-do list app.
+
+# Client is defined as an object with a unique ID representing a connection to the BigMassive server.
+# Client objects will persist between sessions and are automatically destructed if inactive for a fixed amount of time.
+# By redefining the client object, you can add extra fields as desired.
+object Client:
+    fields:
+        user is Linkage with User # The assumption that's made here is that the linkage is fully defined in the definition of the other object involved.
+
+import generate_password_hash from utils/security.py # use this statement to import variables from external Python files
+
+object User:
+    fields:
+        list is TodoList with editors owner # at the end of a field definition, a 'with editors x, y and with viewers z' block can be used with role names to specify explicit editing/viewing perms.
+        password_hash is String # there are no implicit view or edit permissions on fields; that's otherwise accomplished through action blocks
+        name is String with editors owner
+        clients is MultiLinkage with Client:
+            default # Definition for a linkage. Linkages are special types of objects that automatically get two fields populated with references to both object references involved in the link.
+            # The fields are automatically named accordingly; in this case, there is a 'user' (one user per client) and a 'clients' (multiple clients per user).
+            # (Note that since this is a MultiLinkage, multiple clients are supported for the same user.)
+    roles: # Role blocks define a way to check for a relationship a client could have with an object.
+        owner:
+            # in a role or action block, the variables 'self', which is the object instance, 'client', which is the client attempting the action, and 'payload' are all defined.
+            ensure self.clients.contains (client)
+    actions:
+        construct: # construct is a special action that causes memory for this object instance to be allocated. As such, it should perform any linkage of this object with others.
+            self.password_hash = generate_password_hash (payload.password)
+            self.clients.add (client)
+        login:
+            ensure self.password_hash is generate_password_hash (payload.password)
+            self.clients.add (client)
+        logout:
+            self.clients.remove (client)
+        # other actions can be created as seen fit
+        edit_name: # this action is actually useless since the name field has explicit edit permissions attached to them; actions are intended for more complex interactions
+            ensure owner # Role names can be used by themselves to be implicitly converted to a boolean indicating whether or not the role is owned.
+            self.name = payload.name
+        destruct: # destruct is a special action that causes memory for this object instance to be deallocated. As such, it should cleanup any linkage of this object with others.
+            ensure owner
+            # none of the following statements are actually required since linkages clean up after themselves when destructed
+            # self.clients.empty ()
+            # the two following statements will accomplish the same task as the above one
+            # self.clients.foreach: # foreach blocks define the lowercase version of the name of the object in the list as the object instance in each iteration.
+                # client.user.detach () # linkages can be attached and detached, when detached they will be removed from both sides involved
+
+alias TodoListItem is String # aliases function exactly the same as typedefs, just a way to avoid copy-pasting and improve readability
+alias TodoList is List of TodoListItem
+
+view Login:

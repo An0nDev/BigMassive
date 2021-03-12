@@ -1,0 +1,87 @@
+# Example BigMassive file format: no annotations (and less detail/extra info)
+
+object Client: # represents web browser session
+    fields:
+        user is Linkage with User
+
+import generate_password_hash from utils/security.py
+
+object User: # represents user of to-do list system
+    fields:
+        list is TodoList with editors owner
+        password_hash is String
+        name is String with editors owner
+        clients is MultiLinkage with Client:
+            default
+    roles:
+        owner:
+            ensure self.clients.contains (client)
+    actions:
+        construct:
+            self.name = payload.name
+            self.password_hash = generate_password_hash (payload.password)
+            self.clients.add (client)
+        static login:
+            self = users.find (user.name.lower () is payload.name.lower ())
+            ensure self.password_hash is generate_password_hash (payload.password)
+            self.clients.add (client)
+        logout:
+            self.clients.remove (client)
+        destruct:
+            ensure owner
+
+alias TodoListItem is String
+alias TodoList is List of TodoListItem
+
+view Login:
+    form for User login:
+        visibility default
+        html_node h1:
+            inner_text "Login"
+        html_node input with name name:
+            attribute type "text"
+            attribute placeholder "Username"
+        html_node input with name password:
+            attribute type "password"
+            attribute placeholder "Password"
+        html_node button with role submission:
+            inner_text "Submit"
+        post_submit:
+            load view TodoList
+    html_node br
+    form for User construct:
+        visibility default
+        duplicate User login
+        modify html_node h1:
+            inner_text "Register"
+
+view TodoList:
+    foreach todo_list_item in client.user.list:
+        form for edit todo_list_item:
+            visibility default
+            html_node input with name _:
+                attribute value todo_list_item
+                bind event focusout submit
+        from for delete todo_list_item:
+            visibility default
+            html_node button with role submission:
+                inner_text "X"
+        html_node br
+    form for client.user.list.construct_in_place:
+        visibility default
+        html_node input with name _:
+            attribute placeholder "New"
+            bind event focusout submit
+    html_node br
+    form for client.user.logout:
+        visibility default
+        html_node button with role submission:
+            inner_text "Logout"
+        post_submit:
+            load view Login
+
+startup:
+    if client.user.is_attached:
+        load view TodoList
+    else:
+        load view Login
