@@ -1,12 +1,16 @@
 # Example BigMassive file format: no annotations (and less detail/extra info)
 
-object Client: # represents web browser session
+define alias TodoListItem as String
+define alias TodoList as List of TodoListItem
+
+modify object Client: # represents web browser session
     fields:
         user is Linkage with User
 
-import generate_password_hash from utils/security.py
+server side:
+    import generate_password_hash from utils/security.py
 
-object User: # represents user of to-do list system
+define object User: # represents user of to-do list system
     fields:
         list is TodoList with editors owner
         password_hash is String
@@ -29,40 +33,37 @@ object User: # represents user of to-do list system
             self.clients.remove (client)
         destruct:
             ensure owner
+define instance users as List of User
 
-alias TodoListItem is String
-alias TodoList is List of TodoListItem
-
-view Login:
+define view Login:
     form for User login:
         visibility default
-        html_node h1:
-            inner_text "Login"
-        html_node input with name name:
-            attribute type "text"
-            attribute placeholder "Username"
-        html_node input with name password:
-            attribute type "password"
-            attribute placeholder "Password"
-        html_node button with role submission:
-            inner_text "Submit"
+        heading:
+            text "Login"
+        text input with name name:
+            placeholder "Username"
+        password input with name password:
+            placeholder "Password"
+        submission button
         post_submit:
             load view TodoList
-    html_node br
+        error block:
+            paragraph:
+                text error
     form for User construct:
         visibility default
         duplicate User login
-        modify html_node h1:
-            inner_text "Register"
+        modify heading:
+            text "Register"
 
-view TodoList:
+define view TodoList:
     foreach todo_list_item in client.user.list:
         form for edit todo_list_item:
             visibility default
             html_node input with name _:
                 attribute value todo_list_item
                 bind event focusout submit
-        from for delete todo_list_item:
+        form for delete todo_list_item:
             visibility default
             html_node button with role submission:
                 inner_text "X"
@@ -80,7 +81,7 @@ view TodoList:
         post_submit:
             load view Login
 
-startup:
+define handler for startup:
     if client.user.is_attached:
         load view TodoList
     else:
