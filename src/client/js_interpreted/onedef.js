@@ -6,10 +6,10 @@
     var parserContext = {};
 
     // loading file to parse
-    var appBmResponse = await fetch (appUrl);
-    var appBm = await appBmResponse.text ();
+    var appDotOnedefResponse = await fetch (appUrl);
+    var appDotOnedef = await appDotOnedefResponse.text ();
     // doing some basic preliminary parsing
-    var appBmLines = appBm.split ("\n").filter (line => !line.trim ().startsWith ("#") && !(line.trim () == "")).map (line => {
+    var appDotOnedefLines = appDotOnedef.split ("\n").filter (line => !line.trim ().startsWith ("#") && !(line.trim () == "")).map (line => {
         // count and remove indents
         var indentCount = 0;
         while (line.startsWith (config ["tab"])) {
@@ -52,7 +52,7 @@
             getCurrentTopLevelItemList ().push (lastBlockStackItem);
         }
     };
-    for (var lineData of appBmLines) {
+    for (var lineData of appDotOnedefLines) {
         var currentIndent = lineData ["indentCount"];
         var line = lineData ["contents"];
         if (currentIndent < blockStack.length) {
@@ -168,7 +168,7 @@
         var callToVisitItem = callsToVisitItem.shift () /* remove first item */;
         visitItem (callToVisitItem [0], callToVisitItem [1]);
     }
-}) (document.currentScript.getAttribute ("bm-app-url"), {
+}) (document.currentScript.getAttribute ("onedef-app-url"), {
     tab: "    ", // four spaces
     commentCharacter: '#', // default is hashtag
     blockStartCharacter: ':', // comes at the end of a line that starts a block
