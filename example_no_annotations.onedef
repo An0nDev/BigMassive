@@ -1,21 +1,25 @@
 # Example onedef file format: no annotations (and less detail/extra info)
 
-define alias TodoListItem as String
-define alias TodoList as List of TodoListItem
+alias TodoListItem is String
+alias TodoList is List of TodoListItem
 
-modify object Client: # represents web browser session
+type User: # forward-declaration for use in Client linkage
+    pass
+
+instance clients is List of Client
+type Client: # represents web browser session
     fields:
-        user is Linkage with User
+        user is Linkage of User
 
 server side:
     import generate_password_hash from utils/security.py
 
-define object User: # represents user of to-do list system
+type User: # represents user of to-do list system
     fields:
         list is TodoList with editors owner
         password_hash is String
         name is String with editors owner
-        clients is MultiLinkage with Client:
+        clients is MultiLinkage of Client:
             default
     roles:
         owner:
@@ -33,9 +37,9 @@ define object User: # represents user of to-do list system
             self.clients.remove (client)
         destruct:
             ensure owner
-define instance users as List of User
+instance users is List of User
 
-define view Login:
+view Login:
     form for User login:
         visibility default
         heading:
@@ -56,7 +60,7 @@ define view Login:
         modify heading:
             text "Register"
 
-define view TodoList:
+view TodoList:
     foreach todo_list_item in client.user.list:
         form for edit todo_list_item:
             visibility default

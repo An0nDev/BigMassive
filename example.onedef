@@ -1,32 +1,32 @@
 # Example onedef file format
 
 # Commas start with hashtags
-noop # They can stand on their own line or start at the very end of an existing one
- noop # Spaces placed at the start or the end of lines are removed.
+pass # They can stand on their own line or start at the very end of an existing one
+ pass # Spaces placed at the start or the end of lines are removed.
 # Empty lines are ignored:
 
-noop_block: # Blocks of code start with an indent and end with an unindent.
-    noop # Note the single indent here.
-    noop_block:
-        noop # Nested blocks of code must be indented one more time progressively.
+pass_block: # Blocks of code start with an indent and end with an unindent.
+    pass # Note the single indent here.
+    pass_block:
+        pass # Nested blocks of code must be indented one more time progressively.
 
 # This example file defines a system for a simple to-do list app.
 
 # Client is defined as an object with a unique ID representing a connection to the BigMassive server.
 # Client objects will persist between sessions and are automatically destructed if inactive for a fixed amount of time.
 # By redefining the client object, you can add extra fields as desired.
-object Client:
+type Client:
     fields:
-        user is Linkage with User # The assumption that's made here is that the linkage is fully defined in the definition of the other object involved.
+        user is Linkage of User # The assumption that's made here is that the linkage is fully defined in the definition of the other object involved.
 
 import generate_password_hash from utils/security.py # use this statement to import variables from external Python files
 
-object User:
+type User:
     fields:
         list is TodoList with editors owner # at the end of a field definition, a 'with editors x, y and with viewers z' block can be used with role names to specify explicit editing/viewing perms.
         password_hash is String # there are no implicit view or edit permissions on fields; that's otherwise accomplished through action blocks
         name is String with editors owner
-        clients is MultiLinkage with Client:
+        clients is MultiLinkage of Client:
             default # Definition for a linkage. Linkages are special types of objects that automatically get two fields populated with references to both object references involved in the link.
             # The fields are automatically named accordingly; in this case, there is a 'user' (one user per client) and a 'clients' (multiple clients per user).
             # (Note that since this is a MultiLinkage, multiple clients are supported for the same user.)
@@ -58,4 +58,4 @@ object User:
 alias TodoListItem is String # aliases function exactly the same as typedefs, just a way to avoid copy-pasting and improve readability
 alias TodoList is List of TodoListItem
 
-view Login:
+# view Login:
