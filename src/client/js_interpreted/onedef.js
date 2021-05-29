@@ -122,7 +122,7 @@
         source.children.push (childContext);
         return childContext;
     }
-    function construct (name, type, extra) {
+    function construct (name, type, args) {
         var constructed = {
             type: type,
             synced: true
@@ -130,9 +130,19 @@
         if (name == "Client") { // special hardcoded case since this is a mix of native + not
 
         }
+        function assertGeneric (type) {
+            function throwError (desc) { throw `Native generic type ${type ["data"] ["name"]} ${desc}`; }
+            if (!Object.keys (type ["data"]).includes ("generic")) throwError ("missing generic flag");
+            if (!type ["data"] ["generic"]) throwError ("marked as non-generic");
+            if (!Object.keys (type ["data"]).includes ("target")) throwError ("missing target");
+        }
         if (type ["data"] ["native"]) {
             switch (type ["data"] ["name"]) {
                 case "String": break
+                case "List":
+                    assertGeneric (type);
+                    type ["data"] ["actions"] = ["add", "remove", "contains"];
+                    break;
                 default: {
                     throw `Unimplemented constructor for native type ${type ["data"] ["name"]}`;
                 }
@@ -150,6 +160,21 @@
     function setMember (target, memberName, memberValue) {
 
     }
+    function callAction (target, actionName, args) {
+        if (target ["type"] ["data"] ["native"]) {
+            switch (target ["type"] ["data"] ["name"]) {
+
+            }
+        } else {
+            var actionsList = target ["type"] ["data"] ["actions"];
+            var actionImplementationsMap = target ["type"] ["data"] ["actionImplementations"];
+            if (!actionsList.includes (actionName)) throw `Action ${actionName} not implemented on object of type ${target ["type"] ["name"]}`;
+            var actionImplementation = actionImplementationsMap [actionName];
+        }
+    }
+    function callActionImplementation (target, implementation, args) {
+        throw "Unimplemented ability to call the implementation of a user-defined action"
+    }
     function deconstruct (target) {
 
     }
@@ -161,7 +186,7 @@
             var genericSource = parseTypeName (context, genericMatch.groups ["genericSource"]);
             if (!genericSource ["data"] ["generic"]) throw "Using non-generic as generic source"
             var generic = {...genericSource}; // makes (shallow) copy of genericSource
-            generic ["target"] = genericTarget;
+            generic ["data"] ["target"] = genericTarget;
             return generic;
         } else {
             var toConsider = [];
@@ -238,7 +263,6 @@
                     addPostVisitSubitemsHook (item, () => {
                         context ["data"] ["fields"] = [];
                         for (var childContext of context ["children"]) {
-                            if (childContext ["data"] ["level"] != "typeFieldsDefinition") throw "Context is child of fields with unknown level";
                             context ["data"] ["fields"].push ({
                                 name: childContext ["data"] ["name"],
                                 type: childContext ["data"] ["type"]
@@ -246,7 +270,18 @@
                         }
                     });
                     visitAllSubitems (item, typeFieldsDefinitionContext);
-                }] // fields:
+                }], // fields:
+                [/actions/, function (item, context, matchGroups) {
+                    var typeActionsDefinitionContext = generateChildContext (context, "typeActionsDefinition", {});
+                    addPostVisitSubitemsHook (item, () => {
+                        context ["data"] ["actions"] = [];
+                        context ["data"] ["actionImplementations"] = {};
+                        for (var childContext of context ["children"]) {
+                            context ["data"] ["actions"].push (childContext ["data"] ["name"]);
+                            context ["data"] ["actionImplementations"] [childContext ["data"] ["name"]] = childContext ["data"] ["implementation"];
+                        }
+                    });
+                }] // actions:
             ]
         }, // inside type xyz: block
         "typeFieldsDefinition": {
@@ -258,7 +293,7 @@
                     });
                     print (`added field ${matchGroups ["name"]} (block)`);
                     visitAllSubitems (item, typeFieldDefinitionContext);
-                }]
+                }] // user is Linkage of User:
             ],
             "statement": [
                 [/(?<name>.+) is (?<typeName>.+)/, function (item, context, matchGroups) {
@@ -267,10 +302,21 @@
                         type: parseTypeName (context, matchGroups ["typeName"])
                     });
                     print (`added field ${matchGroups ["name"]} (stmt)`);
-                }]
+                }] // password_hash is String
             ]
         }, // inside fields: block
-        "typeFieldDefinition": {} // inside xyz is X with Y: block
+        "typeFieldDefinition": {}, // inside xyz is X with Y: block
+        "typeActionsDefinition": {
+            "block": [
+                [/(?<name>.+)/, function (item, context, matchGroups) {
+                    var methodDefinitionContext = generateChildContext (context, "actionDefinition", {
+                        name: matchGroups ["name"]
+                    });
+                    print (`added method ${matchGroups ["name"]}`);
+                    visitAllSubitems (item, methodDefinitionContext);
+                }]
+            ]
+        } // inside actions: block
         // (etc...)
     };
 
@@ -291,6 +337,7 @@
         });
     }
     addNative ("String", false);
+    addNative ("Boolean", false);
     addNative ("List", true);
     addNative ("Linkage", true);
     generateChildContext (topLevelContext, "typeDefinition", {

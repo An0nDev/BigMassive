@@ -1,0 +1,40 @@
+type TodoEntry:
+    fields:
+        value is String
+        isComplete is Boolean
+    actions:
+        construct:
+            self.value = payload.value
+        complete:
+            self.isComplete = True
+        destruct:
+            pass
+
+instance todos is List of String
+
+view TodoListEditor:
+    foreach todo in todos: # reevaluate block contents when list type is modified, syntax is "var_name in (expression)"
+        node text: # definition of view node, type defines which attributes it has, text has value (what text should be shown)
+            if todo.isComplete: # reevaluate block contents when boolean type is modified, syntax is "(expression)", type coerce to boolean
+                value "✔"
+            else:
+                value "❌"
+            form for complete todo: # submits when event in 'submit on' is triggered, syntax is "form for action_name (expression)"
+                submit on click # binds submission of closest form to triggered event
+                # ^ should be supported on all node types
+        form for edit todo.value: # most natives have edit action, takes one positional argument (new value)
+            node input:
+                name _0 # names consisting of underscores with a number become the positional argument with the given number
+                submit on focusout
+        form for destruct todo:
+            node button:
+                text "Delete"
+                submit on click
+    form for add todos: # lists have add action, all arguments are forwarded to ctor of generic target
+        node input:
+            name value # TodoEntry.construct needs value in payload
+        node button:
+            text "Add"
+            submit on click
+
+main view TodoListEditor
