@@ -2,6 +2,7 @@ from .advanced_common import *
 import re
 
 Regex = str
+def NAMED (name: str, matcher: Regex = ".+") -> Regex: return f"(?P<{name}>{matcher})" # generates named match group regex component, with matcher being regex specifier for contents
 MatchResult = Optional [re.Match]
 
 class AdvancedTransformer:
@@ -11,26 +12,38 @@ class AdvancedTransformer:
         def raise_out_of_context (_subitem: BasicItem, block_type: str): raise Exception (f"subitem {_subitem} seems to be out of context in a {block_type} block")
 
         for top_level_item in basic_list:
-            print (f"item: {top_level_item}")
+            # print (f"item: {top_level_item}")
 
-            is_type_definition_block, result = AdvancedTransformer._match (BasicBlockItem, r"type (?P<name>.+)", top_level_item)
+            is_type_definition_block, result = AdvancedTransformer._match (BasicBlockItem, f"type {NAMED ('name')}", top_level_item)
             if is_type_definition_block:
                 type_definition_block: BasicBlockItem = top_level_item
+                _type: UserDefinedType = UserDefinedType (name = result.group ("name"))
                 for type_definition_block_subitem in type_definition_block.subitems:
                     is_type_definition_fields_node, result = AdvancedTransformer._match (BasicBlockItem, r"fields", type_definition_block_subitem)
                     if is_type_definition_fields_node:
                         type_definition_fields_node = type_definition_block_subitem
-                        for field_definition in type_definition_fields_node.subitems:
-                            print (f"field definition: {field_definition}")
-                            # TODO more parsing of field definition
+                        for type_definition_fields_node_subitem in type_definition_fields_node.subitems:
+                            is_field_definition, result = AdvancedTransformer._match (BasicStatementItem, f"{NAMED ('name')} is {NAMED ('type')}", type_definition_fields_node_subitem)
+                            if is_field_definition:
+                                field_definition = type_definition_fields_node_subitem
+                                print (f"TODO parse field definition with name {result.group ('name')} and type {result.group ('type')}")  # TODO more parsing of field definition
+                                # _type.fields.append ()
+                                continue
+
+                            raise_out_of_context (type_definition_block_subitem, "type definition fields node")
                         continue
 
                     is_type_definition_actions_node, result = AdvancedTransformer._match (BasicBlockItem, r"actions", type_definition_block_subitem)
                     if is_type_definition_actions_node:
                         type_definition_actions_node = type_definition_block_subitem
-                        for action_definition_block in type_definition_actions_node.subitems:
-                            print (f"action definition: {action_definition_block}")
-                            # TODO more parsing of action definition
+                        for type_definition_actions_node_subitem in type_definition_actions_node.subitems:
+                            is_type_definition_action_node, result = AdvancedTransformer._match (BasicBlockItem, r"(?P<name>.+)", type_definition_actions_node_subitem)
+                            if is_type_definition_action_node:
+                                type_definition_action_node = type_definition_actions_node_subitem
+                                print (f"TODO parse action node: {type_definition_action_node}") # TODO more parsing of action node
+                                continue
+
+                            raise_out_of_context (type_definition_actions_node_subitem, "type definition actions node")
                         continue
 
                     raise_out_of_context (type_definition_block_subitem, "type definition")

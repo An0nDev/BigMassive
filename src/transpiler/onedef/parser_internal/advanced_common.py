@@ -31,8 +31,8 @@ class NativeType: pass
 @dataclasses.dataclass
 class UserDefinedType:
     name: Name
-    fields: List [Field]
-    actions: List [Action]
+    fields: List [Field] = dataclasses.field (default_factory = list)
+    actions: List [Action] = dataclasses.field (default_factory = list)
 
 Type = Union [NativeType, UserDefinedType]
 
