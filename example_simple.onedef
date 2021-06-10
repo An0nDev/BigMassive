@@ -4,13 +4,13 @@ type TodoEntry:
         isComplete is Boolean
     actions:
         construct:
-            self.value = payload.value
+            self.value = value
         complete:
             self.isComplete = True
         destruct:
             pass
 
-instance todos is List of String
+instance todos is List of TodoEntry
 
 view TodoListEditor:
     foreach todo in todos: # reevaluate block contents when list type is modified, syntax is "var_name in (expression)"
@@ -22,7 +22,7 @@ view TodoListEditor:
             form for complete todo: # submits when event in 'submit on' is triggered, syntax is "form for action_name (expression)"
                 submit on click # binds submission of closest form to triggered event
                 # ^ should be supported on all node types
-        form for edit todo.value: # most natives have edit action, takes one positional argument (new value)
+        form for edit todo.value: # most non-generic natives have edit action, takes one positional argument (new value)
             node input:
                 name _0 # names consisting of underscores with a number become the positional argument with the given number
                 submit on focusout
